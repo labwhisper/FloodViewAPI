@@ -1,0 +1,54 @@
+{
+  "input": {
+    "bounds": {
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [16.9206, 51.0603],
+            [17.1206, 51.0603],
+            [17.1206, 51.1603],
+            [16.9206, 51.1603],
+            [16.9206, 51.0603]
+          ]
+        ]
+      }
+    },
+    "data": [
+      {
+        "type": "S1GRD",
+        "id": "S1",
+        "dataFilter": {
+          "timeRange": {
+            "from": "2024-09-01T00:00:00Z",
+            "to": "2024-09-18T23:59:59Z"
+          }
+        }
+      },
+      {
+        "type": "DEM",
+        "id": "DEM",
+				        "dataFilter": {
+          "timeRange": {
+            "from": "2024-09-01T00:00:00Z",
+            "to": "2024-09-18T23:59:59Z"
+          }
+        }
+      }
+    ]
+  },
+"evalscript": "//VERSION=3\nfunction setup() {\n  return {\n    input: [{datasource: \"S1\", bands: [\"VV\", \"VH\", \"dataMask\"]}, {datasource: \"DEM\", bands: [\"DEM\"]}],\n    output: { bands: 4 }\n  };\n}\nfunction evaluatePixel(samples) {\n  let S1 = samples.S1[0];\n  let DEM = samples.DEM[0];\n  let vv_dB = 10 * Math.log10(S1.VV + 0.00001);\n  let vh_dB = 10 * Math.log10(S1.VH + 0.00001);\n  let waterThreshold = -20.0;\n  let vhUrbanThreshold = -15.0;\n  let membershipWater = 1 / (1 + Math.exp(-(vv_dB - waterThreshold) / 5));\n  let isFlooded = vv_dB < waterThreshold && membershipWater >= 0.4 && vh_dB < vhUrbanThreshold;\n  let elevationFactor = DEM.DEM < 150.0 ? 1.0 : 0.0;\n  if (isFlooded && elevationFactor === 1.0) {\n    return [0.0, 0.0, 1.0, S1.dataMask]; // Blue for water\n  }\n  return [0.0, 0.0, 0.0, 0.0]; // Transparent for non-flooded areas\n}",
+
+  "output": {
+    "width": 512,
+    "height": 512,
+    "responses": [
+      {
+        "identifier": "default",
+        "format": {
+          "type": "image/png"
+        }
+      }
+    ]
+  }
+}

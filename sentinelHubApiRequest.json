@@ -1,0 +1,42 @@
+{
+  "input": {
+    "bounds": {
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [16.9206, 51.0603],
+            [17.1206, 51.0603],
+            [17.1206, 51.1603],
+            [16.9206, 51.1603],
+            [16.9206, 51.0603]
+          ]
+        ]
+      }
+    },
+    "data": [
+      {
+        "type": "S1GRD",
+        "dataFilter": {
+          "timeRange": {
+            "from": "2024-09-01T00:00:00Z",
+            "to": "2024-09-20T23:59:59Z"
+          }
+        }
+      }
+    ]
+  },
+  "evalscript": "//VERSION=3\nfunction setup() {\n  return {\n    input: [\"VV\", \"VH\", \"dataMask\"],\n    output: { bands: 4 }\n  };\n}\nfunction evaluatePixel(sample) {\n  let vv_dB = 10 * Math.log10(sample.VV + 0.00001);\n  let vh_dB = 10 * Math.log10(sample.VH + 0.00001);\n  let waterThreshold = -20.0;\n  let vhUrbanThreshold = -15.0;\n  let fuzzyMembership = 1 / (1 + Math.exp(-(vv_dB - waterThreshold) / 5));\n  let isFlooded = vv_dB < waterThreshold && fuzzyMembership >= 0.4 && vh_dB < vhUrbanThreshold;\n  return isFlooded ? [0.0, 0.0, 1.0, sample.dataMask] : [0.0, 0.0, 0.0, 0.0];\n}",
+  "output": {
+    "width": 512,
+    "height": 512,
+    "responses": [
+      {
+        "identifier": "default",
+        "format": {
+          "type": "image/png"
+        }
+      }
+    ]
+  }
+}
